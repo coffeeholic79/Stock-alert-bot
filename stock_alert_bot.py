@@ -105,13 +105,26 @@ def get_top_trading():
         # type_2 클래스를 가진 테이블의 tr 태그들을 가져옴
         rows = soup.select("table.type_2 tr")
         
+        import re
         for row in rows:
             cols = row.select("td")
             # 데이터가 있는 행인지 확인 (순위, 종목명, 현재가 등)
-            if len(cols) >= 3 and cols[0].text.strip().isdigit():
+            if len(cols) >= 5 and cols[0].text.strip().isdigit():
                 name = cols[1].select_one("a").text.strip()
                 price = cols[2].text.strip()
-                top_stocks.append(f"{name} ({price}원)")
+                
+                change_amt_raw = cols[3].text.strip()
+                change_pct = cols[4].text.strip().replace('\n', '').replace(' ', '')
+                change_amt = re.sub(r'[^0-9,]', '', change_amt_raw)
+                
+                if cols[3].select_one(".bu_pup") or cols[3].select_one(".red02"):
+                    icon = "🔺"
+                elif cols[3].select_one(".bu_pdn") or cols[3].select_one(".nv01"):
+                    icon = "▼"
+                else:
+                    icon = "-"
+                    
+                top_stocks.append(f"{name} ({price}원, {icon}{change_amt}원, {change_pct})")
                 
                 if len(top_stocks) >= 5:
                     break
