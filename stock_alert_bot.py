@@ -31,8 +31,29 @@ def get_market_index():
         res.raise_for_status()
         soup = BeautifulSoup(res.text, 'html.parser')
         
-        kospi = soup.select_one("#KOSPI_now").text.strip()
-        kosdaq = soup.select_one("#KOSDAQ_now").text.strip()
+        def parse_index(id_now, id_change):
+            now = soup.select_one(f"#{id_now}").text.strip()
+            change_node = soup.select_one(f"#{id_change}")
+            if not change_node:
+                return now
+            
+            if change_node.select_one(".nup"):
+                icon = "🔺"
+            elif change_node.select_one(".ndown"):
+                icon = "🔻"
+            else:
+                icon = "-"
+                
+            clean_text = change_node.text.replace('상승', '').replace('하락', '').replace('보합', '').strip()
+            parts = clean_text.split()
+            if len(parts) >= 2:
+                change_str = f"({icon}{parts[0]}, {parts[1]})"
+            else:
+                change_str = f"({icon}{clean_text})"
+            return f"{now} {change_str}"
+
+        kospi = parse_index("KOSPI_now", "KOSPI_change")
+        kosdaq = parse_index("KOSDAQ_now", "KOSDAQ_change")
         return kospi, kosdaq
     except Exception as e:
         print(f"지수 가져오기 실패: {e}")
@@ -47,7 +68,28 @@ def get_stock_price(code):
         
         # 현재가
         price = soup.select_one(".no_today .blind").text.strip()
-        return price
+        
+        # 전일대비
+        exday_node = soup.select_one(".no_exday")
+        if exday_node:
+            ems = exday_node.select("em")
+            if len(ems) >= 2:
+                change_amt = ems[0].select_one(".blind").text.strip()
+                change_pct = ems[1].select_one(".blind").text.strip()
+                
+                if "no_up" in ems[0].get("class", []):
+                    icon = "🔺"
+                    pct_prefix = "+"
+                elif "no_down" in ems[0].get("class", []):
+                    icon = "🔻"
+                    pct_prefix = "-"
+                else:
+                    icon = "-"
+                    pct_prefix = ""
+                    
+                return f"{price}원 ({icon}{change_amt}원, {pct_prefix}{change_pct}%)"
+            
+        return f"{price}원"
     except Exception as e:
         print(f"{code} 가격 가져오기 실패: {e}")
         return "N/A"
@@ -139,7 +181,7 @@ def job():
     stock_texts = []
     for name, code in STOCKS.items():
         price = get_stock_price(code)
-        stock_texts.append(f"- {name}: {price}원")
+        stock_texts.append(f"- {name}: {price}")
     
     # 3. 거래량 상위 5종목
     top_trading = get_top_trading()
