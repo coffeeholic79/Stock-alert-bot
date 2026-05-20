@@ -40,7 +40,7 @@ def get_market_index():
             if change_node.select_one(".nup"):
                 icon = "🔺"
             elif change_node.select_one(".ndown"):
-                icon = "🔻"
+                icon = "🔽"
             else:
                 icon = "-"
                 
@@ -81,7 +81,7 @@ def get_stock_price(code):
                     icon = "🔺"
                     pct_prefix = "+"
                 elif "no_down" in ems[0].get("class", []):
-                    icon = "🔻"
+                    icon = "🔽"
                     pct_prefix = "-"
                 else:
                     icon = "-"
